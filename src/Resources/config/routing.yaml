@@ -1,0 +1,4 @@
+mygento_payment_redirect:
+    path: /payment/redirect/{code}/{orderId}
+    controller: Mygento\Payment\Controller\Redirect::execute
+    methods: GET
