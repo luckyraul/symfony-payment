@@ -1,0 +1,8 @@
+mygento_payment_check:
+    path: /payment/check/{code}/{orderId}
+    controller: Mygento\Payment\Controller\Check::execute
+    methods: GET
+mygento_payment_pay:
+    path: /payment/pay/{order}
+    controller: Mygento\Payment\Controller\Pay::execute
+    methods: GET
