@@ -16,6 +16,11 @@ class PaymentManager
         private iterable $adapters,
     ) {}
 
+    public function getPaymentUrl(string $code, string $orderId): string
+    {
+        return $this->service->findRedirectKey($code, $orderId) ?? $this->service->createRedirectKey($code, $orderId);
+    }
+
     public function pay(string $code, string $method, Api\InvoiceInterface $invoice): Model\Result
     {
         $adapter = $this->getAdapter($code);
@@ -47,7 +52,7 @@ class PaymentManager
         if ($final) {
             return new Model\Result(null, $final, $reccuring);
         }
-        $url = $this->service->findRedirectKey($code, $invoice->getOrder()) ?? $this->service->createRedirectKey($code, $invoice->getOrder());
+        $url = $this->getPaymentUrl($code, $invoice->getOrder());
 
         return new Model\Result($url, false, $reccuring);
     }

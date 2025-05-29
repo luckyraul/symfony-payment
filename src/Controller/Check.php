@@ -4,10 +4,11 @@ namespace Mygento\Payment\Controller;
 
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
-// use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Mygento\Payment\Repository\RegistrationRepository;
 use Mygento\Payment\PaymentManager;
 use Mygento\Payment\Config;
+use Mygento\Payment\Event\PaymentCheck;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class Check
@@ -16,7 +17,7 @@ class Check
         private PaymentManager $manager,
         private RegistrationRepository $repo,
         private Config $config,
-        // private UrlGeneratorInterface $router,
+        private EventDispatcherInterface $dispatcher,
     ) {}
 
     public function execute(string $code, string $orderId): Response
@@ -27,7 +28,11 @@ class Check
         }
 
         try {
-            $this->manager->check($registration->getCode(), $registration->getPaymentIdentifier());
+            $info = $this->manager->check($registration->getCode(), $registration->getPaymentIdentifier());
+            if ($registration->getPaymentIdentifier()) {
+                $event = new PaymentCheck($registration->getPaymentIdentifier(), $info);
+                $this->dispatcher->dispatch($event);
+            }
         } catch (\Throwable) {
         }
 

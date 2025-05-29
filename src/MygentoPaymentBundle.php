@@ -38,10 +38,13 @@ class MygentoPaymentBundle extends AbstractBundle
             ->args([service('doctrine')])
             ->alias(Repository\RegistrationRepository::class, 'mygento.payment_regrepo');
         $container->services()->set('mygento.payment_service', Service\Management::class)
-            ->arg(0, service('mygento.payment_regrepo'))
-            ->arg(1, service('mygento.payment_transrepo'))
-            ->arg(2, service('mygento.payment_keyrepo'))
-            ->arg(3, service('router'))
+            ->args([
+                service('mygento.payment_regrepo'),
+                service('mygento.payment_transrepo'),
+                service('mygento.payment_keyrepo'),
+                service('router'),
+            ])
+            ->public()
             ->alias(Service\Management::class, 'mygento.payment_service');
         $container->services()->set('mygento.payment_manager', PaymentManager::class)
             ->args([
@@ -50,6 +53,7 @@ class MygentoPaymentBundle extends AbstractBundle
                 service('mygento.payment_service'),
                 tagged_iterator('mygento.payment_adapter_factory', null, 'getCode'),
             ])
+            ->public()
             ->alias(PaymentManager::class, 'mygento.payment_manager');
         $container->services()
             ->load('Mygento\\Payment\\Controller\\', './Controller/*.php')
