@@ -2,7 +2,7 @@
 
 namespace Mygento\Payment\Command;
 
-use Mygento\Payment\PaymentManager;
+use Mygento\Payment\Management;
 use Mygento\Payment\Repository\RegistrationRepository;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -14,7 +14,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 class Refund extends Command
 {
     public function __construct(
-        private PaymentManager $manager,
+        private Management $manager,
         private RegistrationRepository $repo,
     ) {
         parent::__construct();

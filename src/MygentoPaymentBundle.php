@@ -37,24 +37,28 @@ class MygentoPaymentBundle extends AbstractBundle
         $container->services()->set('mygento.payment_regrepo', Repository\RegistrationRepository::class)
             ->args([service('doctrine')])
             ->alias(Repository\RegistrationRepository::class, 'mygento.payment_regrepo');
-        $container->services()->set('mygento.payment_service', Service\Management::class)
+        $container->services()->set('mygento.payment_basic', Service\Basic::class)
             ->args([
                 service('mygento.payment_regrepo'),
                 service('mygento.payment_transrepo'),
+                service('router'),
+            ])
+            ->alias(Service\Basic::class, 'mygento.payment_basic');
+        $container->services()->set('mygento.payment_redirect', Service\Redirect::class)
+            ->args([
                 service('mygento.payment_keyrepo'),
                 service('router'),
             ])
-            ->public()
-            ->alias(Service\Management::class, 'mygento.payment_service');
-        $container->services()->set('mygento.payment_manager', PaymentManager::class)
+            ->alias(Service\Redirect::class, 'mygento.payment_redirect');
+        $container->services()->set('mygento.payment_management', Management::class)
             ->args([
-                service('mygento.payment_transrepo'),
+                service('mygento.payment_basic'),
+                service('mygento.payment_redirect'),
                 service('mygento.payment_regrepo'),
-                service('mygento.payment_service'),
                 tagged_iterator('mygento.payment_adapter_factory', null, 'getCode'),
             ])
             ->public()
-            ->alias(PaymentManager::class, 'mygento.payment_manager');
+            ->alias(Management::class, 'mygento.payment_management');
         $container->services()
             ->load('Mygento\\Payment\\Controller\\', './Controller/*.php')
             ->autowire()

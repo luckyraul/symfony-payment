@@ -5,16 +5,14 @@ namespace Mygento\Payment\Service;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Mygento\Payment\Repository\RegistrationRepository;
 use Mygento\Payment\Repository\TransactionRepository;
-use Mygento\Payment\Repository\KeyRepository;
 use Mygento\Payment\Entity;
 use Mygento\Payment\Model\TransactionSummary;
 
-class Management
+class Basic
 {
     public function __construct(
         private RegistrationRepository $regRepo,
         private TransactionRepository $transRepo,
-        private KeyRepository $keyRepo,
         private UrlGeneratorInterface $urlGenerator,
     ) {}
 
@@ -27,31 +25,27 @@ class Management
         );
     }
 
-    public function createRedirectKey(
-        string $code,
-        string $orderId,
-    ): string {
-        $hash = hash('sha1', base64_encode(microtime() . $orderId . rand(1, 1048576)));
-        $entity = new Entity\Key($code, $orderId, $hash);
-
-        $this->keyRepo->save($entity, true);
-
-        return $this->urlGenerator->generate(
-            'mygento_payment_pay',
-            ['order' => $entity->getHkey()],
-            UrlGeneratorInterface::ABSOLUTE_URL,
-        );
-    }
-
-    public function findRedirectKey(string $code, string $orderId): ?string
+    public function getTransactionSummaryByPayment(string $code, string $paymentIdentifier): TransactionSummary
     {
-        $entity = $this->keyRepo->findOneBy(['code' => $code, 'order' => $orderId]);
+        $data = $this->transRepo->getTransactionSummary($code, $paymentIdentifier);
+        $result = [
+            Entity\Transaction::AUTH_TYPE => 0,
+            Entity\Transaction::CAPTURE_TYPE => 0,
+            Entity\Transaction::VOID_TYPE => 0,
+            Entity\Transaction::REFUND_TYPE => 0,
+        ];
+        $types = array_flip(Entity\Transaction::TRANSACTION_TYPE);
 
-        return $entity ? $this->urlGenerator->generate(
-            'mygento_payment_pay',
-            ['order' => $entity->getHkey()],
-            UrlGeneratorInterface::ABSOLUTE_URL,
-        ) : null;
+        foreach ($data as $tr) {
+            $result[$types[$tr['transactionType']]] += $tr['sum'];
+        }
+
+        return new TransactionSummary(
+            (string) $result[Entity\Transaction::AUTH_TYPE],
+            (string) $result[Entity\Transaction::CAPTURE_TYPE],
+            (string) $result[Entity\Transaction::VOID_TYPE],
+            (string) $result[Entity\Transaction::REFUND_TYPE],
+        );
     }
 
     public function createRegistration(
@@ -72,9 +66,28 @@ class Management
         return $this->regRepo->findOneBy(['code' => $code, 'order' => $orderId]);
     }
 
-    public function getTransactionSummary(string $code, string $paymentIdentifier): TransactionSummary
+    public function resetRegistration(string $code, string $orderId): void
     {
-        $data = $this->transRepo->getTransactionSummary($code, $paymentIdentifier);
+        $entity = $this->findRegistration($code, $orderId);
+        if ($entity) {
+            $entity->setPaymentIdentifier(null);
+            $entity->setPaymentUrl(null);
+            $entity->setTry($entity->getTry() + 1);
+            $this->regRepo->save($entity, true);
+        }
+    }
+
+    public function deleteRegistration(string $code, string $orderId): void
+    {
+        $entity = $this->regRepo->findOneBy(['code' => $code, 'order' => $orderId]);
+        if ($entity) {
+            $this->regRepo->remove($entity, true);
+        }
+    }
+
+    public function getTransactionSummaryByOrder(string $code, string $order): TransactionSummary
+    {
+        $data = $this->transRepo->getTransactionSummaryByOrder($code, $order);
         $result = [
             Entity\Transaction::AUTH_TYPE => 0,
             Entity\Transaction::CAPTURE_TYPE => 0,
@@ -106,15 +119,15 @@ class Management
         );
     }
 
-    public function resetRegistration(string $code, string $orderId): void
+    public function findCaptureTransaction(string $code, string $paymentIdentifier): ?Entity\Transaction
     {
-        $entity = $this->findRegistration($code, $orderId);
-        if ($entity) {
-            $entity->setPaymentIdentifier(null);
-            $entity->setPaymentUrl(null);
-            $entity->setTry($entity->getTry() + 1);
-            $this->regRepo->save($entity, true);
-        }
+        return $this->transRepo->findOneBy(
+            [
+                'code' => $code,
+                'transactionType' => Entity\Transaction::CAPTURE,
+                'paymentIdentifier' => $paymentIdentifier,
+            ],
+        );
     }
 
     /**

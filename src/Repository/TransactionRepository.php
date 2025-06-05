@@ -36,4 +36,18 @@ class TransactionRepository extends ServiceEntityRepository
 
         return $qb->getQuery()->getResult();
     }
+
+    /**
+     * @return array<int, array<string>>
+     */
+    public function getTransactionSummaryByOrder(string $code, string $order): array
+    {
+        $qb = $this->createQueryBuilder('tr');
+        $qb->select('tr.transactionType, sum(tr.amount) as sum');
+        $qb->andWhere($qb->expr()->eq('tr.code', $qb->expr()->literal($code)));
+        $qb->andWhere($qb->expr()->eq('tr.order', $qb->expr()->literal($order)));
+        $qb->addGroupBy('tr.transactionType');
+
+        return $qb->getQuery()->getResult();
+    }
 }

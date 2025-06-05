@@ -2,7 +2,7 @@
 
 namespace Mygento\Payment\Api;
 
-use Mygento\Payment\Service\Management;
+use Mygento\Payment\Service\Basic;
 use Mygento\Payment\Model\PaymentInfo;
 use Mygento\Payment\Entity\Registration;
 use Mygento\Payment\Entity\Transaction;
@@ -11,9 +11,11 @@ interface AdapterInterface
 {
     public static function getCode(): string;
 
-    public function getService(): Management;
+    public function getService(): Basic;
 
     public function supportsTwoStepPayment(): bool;
+
+    public function supportsRegistration(): bool;
 
     public function isTwoStepPayment(): bool;
 

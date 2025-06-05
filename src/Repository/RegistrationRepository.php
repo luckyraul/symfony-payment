@@ -22,4 +22,15 @@ class RegistrationRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Registration::class);
     }
+
+    /**
+     * @return Registration[]
+     */
+    public function getPending(): array
+    {
+        $qb = $this->createQueryBuilder('r');
+        $qb->where($qb->expr()->isNotNull('r.paymentIdentifier'));
+
+        return $qb->getQuery()->getResult();
+    }
 }
