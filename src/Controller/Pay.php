@@ -5,7 +5,7 @@ namespace Mygento\Payment\Controller;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Mygento\Payment\Repository\KeyRepository;
 use Mygento\Payment\Repository\RegistrationRepository;
-use Mygento\Payment\PaymentManager;
+use Mygento\Payment\Management;
 use Mygento\Payment\Config;
 use Mygento\Payment\Entity\Key;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -13,7 +13,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 class Pay
 {
     public function __construct(
-        private PaymentManager $manager,
+        private Management $management,
         private KeyRepository $repo,
         private RegistrationRepository $regRepo,
         private Config $config,
@@ -25,15 +25,15 @@ class Pay
         if (!$orderInfo) {
             throw new NotFoundHttpException('The order does not exist');
         }
-        $reg = $this->regRepo->findOneBy([
-            'code' => $orderInfo->getCode(),
-            'order' => $orderInfo->getOrder(),
-        ]);
-        if (!$reg || !$reg->getPaymentIdentifier()) {
-            throw new NotFoundHttpException('The order does not exist');
+
+        if ($this->management->isPaid($orderInfo->getCode(), $orderInfo->getOrder())) {
+            $this->repo->remove($orderInfo, true);
+
+            return new RedirectResponse($this->config->getCallbackRedirect() ?? '/checkout/success', 302);
         }
-        $result = $this->manager->check($order, $reg->getPaymentIdentifier());
-        if (0 !== bccomp($result->amountAuthorised, '0') || 0 !== bccomp($result->amountPaid, '0')) {
+
+        $result = $this->management->check($orderInfo->getCode(), $orderInfo->getOrder());
+        if ($result && (0 !== bccomp($result->amountAuthorised, '0') || 0 !== bccomp($result->amountPaid, '0'))) {
             return new RedirectResponse($this->config->getCallbackRedirect() ?? '/checkout/success', 302);
         }
 
